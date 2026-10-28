@@ -1,0 +1,25 @@
+{
+  "name": "introduction-to-ai-interface",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/finngrandell/introduction-to-ai-interface.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/finngrandell/introduction-to-ai-interface/issues"
+  },
+  "homepage": "https://github.com/finngrandell/introduction-to-ai-interface#readme",
+  "devDependencies": {
+    "@unocss/cli": "^66.12.0",
+    "@unocss/preset-uno": "^66.12.0",
+    "unocss": "^66.12.0"
+  }
+}
