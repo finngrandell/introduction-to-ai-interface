@@ -24,8 +24,8 @@ export default function App() {
 
             <div>
               <div className="flex gap-3 items-left">
-                <SolutionSelector title="Solution A" subtitle="Random Forest" isSelected={solutionSelected == 'a'} onClick={() => setSolutionSelected('a')}/>
-                <SolutionSelector title="Solution B" subtitle="Neural Network (FNN)" isSelected={solutionSelected == 'b'} onClick={() => setSolutionSelected('b')}/>
+                <SolutionSelector title="Solution A" subtitle="Neural Network (FNN)" isSelected={solutionSelected == 'a'} onClick={() => setSolutionSelected('a')}/>
+                <SolutionSelector title="Solution B" subtitle="Decision Tree" isSelected={solutionSelected == 'b'} onClick={() => setSolutionSelected('b')}/>
               </div>
             </div>
 

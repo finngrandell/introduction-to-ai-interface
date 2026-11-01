@@ -19,29 +19,32 @@ function SolutionWindow({solution}){
     const step = steps[stepIndex];
 
     return (
-        <div className="mt-3 border border-solid border-white rounded-[12px] p-4">
-            <div className="flex justify-between items-center gap-3">
-                <div>
-                    <h3>{step.title}</h3>
-                    <p>{step.subtitle}</p>
+        <div className="mt-3 border border-solid border-white rounded-[12px] p-4 ">
+            <div className="flex gap-10 w-full">
+                <div className="flex flex-4 justify-between items-top gap-3">
+                    <div>
+                        <h3 className="m-0">{step.title}</h3>
+                        <p className="m-0 mt-3">{step.subtitle}</p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    <button className="px-2 py-1 bg-ink text-white border border-solid border-white rounded-[8px] disabled:opacity-40" aria-label="Previous step" disabled={stepIndex === 0} onClick={() => setStepIndex(stepIndex - 1)}>←</button>
-                    <span>{stepIndex + 1} / {steps.length}</span>
-                    <button className="px-2 py-1 bg-ink text-white border border-solid border-white rounded-[8px] disabled:opacity-40" aria-label="Next step" disabled={stepIndex === steps.length - 1} onClick={() => setStepIndex(stepIndex + 1)}>→</button>
+                <div className="flex-6 w-full">
+                    <pre className="mt-3 overflow-x-auto"><code>{step.code}</code></pre>
+                    {step.outputs.length > 0 && (
+                        <div className="mt-3 bg-deep-teal rounded-[8px] p-3">
+                            <p className="m-0 mb-2 text-teal">Out:</p>
+                            {step.outputs.map((output, index) => (
+                                output.type === "image"
+                                    ? <img key={index} className="block max-w-full h-auto" src={images[`../solutions/${solution}/${output.src}`]} alt={output.alt} />
+                                    : <pre key={index} className="m-0 overflow-x-auto">{output.text}</pre>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
-            <pre className="mt-3 overflow-x-auto"><code>{step.code}</code></pre>
-            {step.outputs.length > 0 && (
-                <div className="mt-3 bg-deep-teal rounded-[8px] p-3">
-                    <p className="m-0 mb-2 text-teal">Out:</p>
-                    {step.outputs.map((output, index) => (
-                        output.type === "image"
-                            ? <img key={index} className="block max-w-full h-auto" src={images[`../solutions/${solution}/${output.src}`]} alt={output.alt} />
-                            : <pre key={index} className="m-0 overflow-x-auto">{output.text}</pre>
-                    ))}
-                </div>
-            )}
+            <div className="w-full flex justify-center gap-2 shrink-0 mt-4">
+                <button className="px-2 py-1 bg-ink text-white border border-solid border-white rounded-[8px] disabled:opacity-40" aria-label="Previous step" disabled={stepIndex === 0} onClick={() => setStepIndex(stepIndex - 1)}>{"<"}</button>
+                <button className="px-2 py-1 bg-ink text-white border border-solid border-white rounded-[8px] disabled:opacity-40" aria-label="Next step" disabled={stepIndex === steps.length - 1} onClick={() => setStepIndex(stepIndex + 1)}>{">"}</button>
+            </div>
         </div>
     );
 }
