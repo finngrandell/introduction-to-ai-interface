@@ -1,7 +1,8 @@
 import { useState } from "react";
-import a from "../solutions/a.json";
+import a from "../solutions/a/a.json";
 
 const solutions = { a };
+const images = import.meta.glob("../solutions/*/images/*", { eager: true, query: "?url", import: "default" });
 
 function SolutionWindow({solution}){
     const [stepIndex, setStepIndex] = useState(0);
@@ -36,7 +37,7 @@ function SolutionWindow({solution}){
                     <p className="m-0 mb-2 text-teal">Out:</p>
                     {step.outputs.map((output, index) => (
                         output.type === "image"
-                            ? <img key={index} className="block max-w-full h-auto" src={import.meta.env.BASE_URL + output.src} alt={output.alt} />
+                            ? <img key={index} className="block max-w-full h-auto" src={images[`../solutions/${solution}/${output.src}`]} alt={output.alt} />
                             : <pre key={index} className="m-0 overflow-x-auto">{output.text}</pre>
                     ))}
                 </div>

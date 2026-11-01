@@ -58,7 +58,7 @@
     "outputs": [
       {
         "type": "image",
-        "src": "solutions/a/step-8.png",
+        "src": "images/step-8.png",
         "alt": "Training curve showing training and validation loss per epoch on a log scale"
       }
     ]
