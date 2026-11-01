@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "unocss \"**/*.html\" -o dist/uno.css --watch",
+    "build": "unocss \"**/*.html\" -o dist/uno.css"
   },
   "repository": {
     "type": "git",
