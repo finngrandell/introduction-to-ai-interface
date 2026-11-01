@@ -2,11 +2,12 @@
   "name": "introduction-to-ai-interface",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/main.jsx",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "unocss \"**/*.html\" -o dist/uno.css --watch",
-    "build": "unocss \"**/*.html\" -o dist/uno.css"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "repository": {
     "type": "git",
@@ -20,8 +21,13 @@
   },
   "homepage": "https://github.com/finngrandell/introduction-to-ai-interface#readme",
   "devDependencies": {
-    "@unocss/cli": "^66.12.0",
-    "@unocss/preset-uno": "^66.12.0",
-    "unocss": "^66.12.0"
-  }
+    "@vitejs/plugin-react": "^6.1.2",
+    "unocss": "^66.12.0",
+    "vite": "^8.3.5"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "type": "module"
 }

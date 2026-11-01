@@ -1,0 +1,88 @@
+[
+  {
+    "title": "Mount Google Drive",
+    "subtitle": "Connect Colab to Google Drive so the dataset can be read.",
+    "code": "from google.colab import drive\ndrive.mount('/content/drive')",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "Drive already mounted at /content/drive; to attempt to forcibly remount, call drive.mount(\"/content/drive\", force_remount=True)."
+      }
+    ]
+  },
+  {
+    "title": "Load the dataset",
+    "subtitle": "Read the energy efficiency CSV and split it into building parameters and targets.",
+    "code": "import pandas as pd\n\ndf = pd.read_csv('/content/drive/MyDrive/IntroAILab2026/Assignment/Energy_Efficiency_Dataset.csv', names = ['x1','x2','x3','x4','x5','x6','x7','x8','y1', 'y2'] )\ndf.head()\n\nX = df.iloc[:, :8] # building parameters\ny = df.iloc[:, 8:] # target parameters - heating and cooling load",
+    "outputs": []
+  },
+  {
+    "title": "Split the data",
+    "subtitle": "Hold back 20% of the data for testing.",
+    "code": "from sklearn.model_selection import train_test_split\n\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)",
+    "outputs": []
+  },
+  {
+    "title": "Set hyperparameters",
+    "subtitle": "Import TensorFlow and define the layer sizes, epochs and batch size.",
+    "code": "import tensorflow as tf\nfrom tensorflow.keras import Sequential\nfrom tensorflow.keras.layers import Input, Dense\n\ninput_dim = X_train.shape[1]\nn_neurons_1 = 64\nn_neurons_2 = 32\nn_neurons_3 = 16\noutput_dim = 2\n\nepochNo = 200\nbatchSize = 16",
+    "outputs": []
+  },
+  {
+    "title": "Build the model",
+    "subtitle": "Stack three hidden ReLU layers and a two-value output layer.",
+    "code": "model = Sequential()\nmodel.add(Input(shape=(input_dim,)))\nmodel.add(Dense(n_neurons_1, activation='relu'))\nmodel.add(Dense(n_neurons_2, activation='relu'))\nmodel.add(Dense(n_neurons_3, activation='relu'))\nmodel.add(Dense(output_dim))",
+    "outputs": []
+  },
+  {
+    "title": "Compile the model",
+    "subtitle": "Use mean squared error loss and the Adam optimizer, then print a summary.",
+    "code": "model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mean_absolute_error'])\nmodel.summary()",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "Model: \"sequential\"\n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓\n┃ Layer (type)                    ┃ Output Shape           ┃       Param # ┃\n┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩\n│ dense (Dense)                   │ (None, 64)             │           576 │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ dense_1 (Dense)                 │ (None, 32)             │         2,080 │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ dense_2 (Dense)                 │ (None, 16)             │           528 │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ dense_3 (Dense)                 │ (None, 2)              │            34 │\n└─────────────────────────────────┴────────────────────────┴───────────────┘\n Total params: 3,218 (12.57 KB)\n Trainable params: 3,218 (12.57 KB)\n Non-trainable params: 0 (0.00 B)"
+      }
+    ]
+  },
+  {
+    "title": "Train the model",
+    "subtitle": "Fit for 200 epochs, using 20% of the training data for validation.",
+    "code": "history = model.fit(X_train, y_train, epochs=epochNo, batch_size=batchSize, validation_split=0.2, verbose=0)",
+    "outputs": []
+  },
+  {
+    "title": "Plot the training curve",
+    "subtitle": "Compare training and validation loss across epochs on a log scale.",
+    "code": "import matplotlib.pyplot as plt\n\nplt.plot(history.history['loss'], label='training loss')\nplt.plot(history.history['val_loss'], label='validation loss')\nplt.xlabel('Epoch')\nplt.ylabel('M2 error')\nplt.yscale('log')\nplt.title('Training curve')\nplt.legend()\nplt.show()",
+    "outputs": [
+      {
+        "type": "image",
+        "src": "solutions/a/step-8.png",
+        "alt": "Training curve showing training and validation loss per epoch on a log scale"
+      }
+    ]
+  },
+  {
+    "title": "Make predictions",
+    "subtitle": "Predict on the test set and compare the first five results with the actual values.",
+    "code": "prediction = model.predict(X_test)\nprint(prediction[:5])\nprint(y_test[:5].values)",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "5/5 ━━━━━━━━━━━━━━━━━━━━ 0s 21ms/step\n[[19.040936 18.660715]\n [15.477582 16.68258 ]\n [32.55538  32.90039 ]\n [39.09298  39.04569 ]\n [17.418001 17.649977]]\n[[16.47 16.9 ]\n [13.17 16.39]\n [32.82 32.78]\n [41.32 46.23]\n [16.69 19.76]]"
+      }
+    ]
+  },
+  {
+    "title": "Evaluate the model",
+    "subtitle": "Calculate the R² score for heating load and cooling load.",
+    "code": "from sklearn import metrics\nimport numpy as np\n\ny_baseline = y_test.values\nfor i in range(2): # r2 for each output parameter - heating & cooling\n  r2 = metrics.r2_score(y_baseline[:, i], prediction[:, i])\n\n  print('r2 error: ' + str(r2))",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "r2 error: 0.8837766723777402\nr2 error: 0.8981754893433493"
+      }
+    ]
+  }
+]
