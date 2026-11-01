@@ -7,7 +7,7 @@ export default function App() {
 
   return (
     <div className="w-full h-full">
-      
+
       <div className="absolute top-0 w-full"> {/* Header */}
          <div className="px-20">
           <h2 className="text-white">Introduction to AI - Heating & Cooling Predictions</h2>
@@ -15,7 +15,7 @@ export default function App() {
         <div className="h-1px bg-white w-full"></div>
       </div>
      
-      <div className="px-20 text-white"> {/* Body */}
+      <div className="px-20 my-25 text-white"> {/* Body */}
         <div>
           <h1>Predicting the heating and cooling loads of buildings</h1>
           <p>Brief explanation here...</p>
