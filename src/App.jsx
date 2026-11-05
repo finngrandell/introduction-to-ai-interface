@@ -30,7 +30,7 @@ export default function App() {
               <div className="flex gap-3 justify-center w-full">
                 <SolutionSelector title="Solution A" subtitle="Neural Network (FNN)" isSelected={solutionSelected == 'a'} onClick={() => setSolutionSelected('a')}/>
                 <SolutionSelector title="Solution B" subtitle="Decision Tree" isSelected={solutionSelected == 'b'} onClick={() => setSolutionSelected('b')}/>
-                <SolutionSelector title="Solution C" subtitle="Other" isSelected={solutionSelected == 'c'} onClick={() => setSolutionSelected('c')}/>
+                <SolutionSelector title="Solution C" subtitle="Support Vector Regression" isSelected={solutionSelected == 'c'} onClick={() => setSolutionSelected('c')}/>
               </div>
             </div>
 

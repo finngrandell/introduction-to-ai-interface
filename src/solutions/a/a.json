@@ -1,87 +1,87 @@
 [
   {
-    "title": "Mount Google Drive",
-    "subtitle": "Connect Colab to Google Drive so the dataset can be read.",
-    "code": "from google.colab import drive\ndrive.mount('/content/drive')",
-    "outputs": [
-      {
-        "type": "text",
-        "text": "Drive already mounted at /content/drive; to attempt to forcibly remount, call drive.mount(\"/content/drive\", force_remount=True)."
-      }
-    ]
-  },
-  {
-    "title": "Load the dataset",
-    "subtitle": "Read the energy efficiency CSV and split it into building parameters and targets.",
+    "title": "Import Pandas and define Dataframes",
+    "subtitle": "The data is loaded from a shared CSV called \"Energy_Efficiency_Dataset.csv\". The eight parameters are extracted into values \"x1..8\" in the dataframe, and the heating and cooling loads are assigned to \"y1\" and \"y2\" respectively. A dataframe X is made with just the building parameters, and another, y, is made with the target parameters. These correspond to the training data that the Neural Network will learn from. The pattern we are looking to establish is the relationship between altering 0-n parameters in X, and the corresponding change in y.",
     "code": "import pandas as pd\n\ndf = pd.read_csv('/content/drive/MyDrive/IntroAILab2026/Assignment/Energy_Efficiency_Dataset.csv', names = ['x1','x2','x3','x4','x5','x6','x7','x8','y1', 'y2'] )\ndf.head()\n\nX = df.iloc[:, :8] # building parameters\ny = df.iloc[:, 8:] # target parameters - heating and cooling load",
     "outputs": []
   },
   {
-    "title": "Split the data",
-    "subtitle": "Hold back 20% of the data for testing.",
+    "title": "Define training datasets",
+    "subtitle": "The data is split into seen and unseen datasets for training and predicting. `train_test_split` allocates `test_size` elements from dataset X into a new set `X_test` and the rest into `X_train` - 80/20 split. `random_state` is a shared seed that all discrete training runs will use (for reproducibility).",
     "code": "from sklearn.model_selection import train_test_split\n\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)",
     "outputs": []
   },
   {
-    "title": "Set hyperparameters",
-    "subtitle": "Import TensorFlow and define the layer sizes, epochs and batch size.",
+    "title": "Define training parameters",
+    "subtitle": "The `input_dim` (input dimensions) for the model are defined as the number of columns in the `X_train` dataset (8). The three hidden layers are set to 64, 32 and 16 neurons, respectively. The model is told to predict in 2 output dimensions (corresponding to the heating and cooling values). `epochNo` describes how many times the full training dataset is run, and `batchSize` indicates the number of runs that the model completes before weight backpropagation.",
     "code": "import tensorflow as tf\nfrom tensorflow.keras import Sequential\nfrom tensorflow.keras.layers import Input, Dense\n\ninput_dim = X_train.shape[1]\nn_neurons_1 = 64\nn_neurons_2 = 32\nn_neurons_3 = 16\noutput_dim = 2\n\nepochNo = 200\nbatchSize = 16",
     "outputs": []
   },
   {
-    "title": "Build the model",
-    "subtitle": "Stack three hidden ReLU layers and a two-value output layer.",
+    "title": "Construct model",
+    "subtitle": "A new model is created, with its `Input` set to the previously defined `input_dim` (8), corresponding to an n-dimensional vector. The three hidden layers are added, and all use ReLU for activation. ReLU is used since the output parameters are independent & the input parameters don't share a common scale and can be represented as high integers. ReLU allows the NN to approximate relationship curves between the input parameters which will regress to similar predictive output values. The output layer is set to `output_dim` (2).",
     "code": "model = Sequential()\nmodel.add(Input(shape=(input_dim,)))\nmodel.add(Dense(n_neurons_1, activation='relu'))\nmodel.add(Dense(n_neurons_2, activation='relu'))\nmodel.add(Dense(n_neurons_3, activation='relu'))\nmodel.add(Dense(output_dim))",
     "outputs": []
   },
   {
-    "title": "Compile the model",
-    "subtitle": "Use mean squared error loss and the Adam optimizer, then print a summary.",
+    "title": "Compile model with summary",
+    "subtitle": "The model is compiled, with the loss function based on the mean squared error between the predicted and actual values. \"Adam\" is used as the optimiser, which modifies a traditional gradient descent approach to also consider recently calculated weights as well as maintaining individual per-weight adaptation. The model is set to output MAE metrics.",
     "code": "model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mean_absolute_error'])\nmodel.summary()",
     "outputs": [
       {
         "type": "text",
-        "text": "Model: \"sequential\"\n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓\n┃ Layer (type)                    ┃ Output Shape           ┃       Param # ┃\n┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩\n│ dense (Dense)                   │ (None, 64)             │           576 │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ dense_1 (Dense)                 │ (None, 32)             │         2,080 │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ dense_2 (Dense)                 │ (None, 16)             │           528 │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ dense_3 (Dense)                 │ (None, 2)              │            34 │\n└─────────────────────────────────┴────────────────────────┴───────────────┘\n Total params: 3,218 (12.57 KB)\n Trainable params: 3,218 (12.57 KB)\n Non-trainable params: 0 (0.00 B)"
+        "text": "Model: \"sequential_1\"\n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓\n┃ Layer (type)                    ┃ Output Shape           ┃       Param # ┃\n┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩\n│ dense_4 (Dense)                 │ (None, 64)             │           576 │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ dense_5 (Dense)                 │ (None, 32)             │         2,080 │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ dense_6 (Dense)                 │ (None, 16)             │           528 │\n├─────────────────────────────────┼────────────────────────┼───────────────┤\n│ dense_7 (Dense)                 │ (None, 2)              │            34 │\n└─────────────────────────────────┴────────────────────────┴───────────────┘\n Total params: 3,218 (12.57 KB)\n Trainable params: 3,218 (12.57 KB)\n Non-trainable params: 0 (0.00 B)"
       }
     ]
   },
   {
-    "title": "Train the model",
-    "subtitle": "Fit for 200 epochs, using 20% of the training data for validation.",
+    "title": "Train model",
+    "subtitle": "The variable `history` is set to the output of the model fitting using the `X_train` and `y_train` datasets. The epochs are set to `epochNo` (200). `batchSize` samples are processed before any weight update. `validation_split` reserves 20% of the test data to compare prediction results against in order to spot overfitting. `verbose=0` strips per-step logs.",
     "code": "history = model.fit(X_train, y_train, epochs=epochNo, batch_size=batchSize, validation_split=0.2, verbose=0)",
     "outputs": []
   },
   {
-    "title": "Plot the training curve",
-    "subtitle": "Compare training and validation loss across epochs on a log scale.",
-    "code": "import matplotlib.pyplot as plt\n\nplt.plot(history.history['loss'], label='training loss')\nplt.plot(history.history['val_loss'], label='validation loss')\nplt.xlabel('Epoch')\nplt.ylabel('M2 error')\nplt.yscale('log')\nplt.title('Training curve')\nplt.legend()\nplt.show()",
+    "title": "Plot training curve",
+    "subtitle": "`matplotlib` is used to plot the training loss compared to the reserved validation sets in order to recognise if the model is overfitting. The x-axis represents the epochs, which progress as the training runs. The y-axis is measured on a logarithmic scale to account for high initial loss values. As the epoch approaches 200, the validation loss begins to spike, indicating overfitting is occuring, and that an optimal epochNo for this dataset sits at around 190.",
+    "code": "import matplotlib.pyplot as plt\n\nplt.plot(history.history['loss'], label='training loss')\nplt.plot(history.history['val_loss'], label='validation loss')\nplt.xlabel('Epoch')\nplt.ylabel('MSE')\nplt.yscale('log')\nplt.title('Training curve')\nplt.legend()\nplt.show()",
     "outputs": [
       {
         "type": "image",
-        "src": "images/step-8.png",
+        "src": "images/step-7.png",
         "alt": "Training curve showing training and validation loss per epoch on a log scale"
       }
     ]
   },
   {
-    "title": "Make predictions",
-    "subtitle": "Predict on the test set and compare the first five results with the actual values.",
+    "title": "Run prediction model",
+    "subtitle": "Once the prediction model has been trained, it is run on the reserved portion of the dataset (X_test). The output is trimmed at 5 results, and compared to their related `y_test` result values. This indicates the final performance of the model, to be evaluated in the next step.",
     "code": "prediction = model.predict(X_test)\nprint(prediction[:5])\nprint(y_test[:5].values)",
     "outputs": [
       {
         "type": "text",
-        "text": "5/5 ━━━━━━━━━━━━━━━━━━━━ 0s 21ms/step\n[[19.040936 18.660715]\n [15.477582 16.68258 ]\n [32.55538  32.90039 ]\n [39.09298  39.04569 ]\n [17.418001 17.649977]]\n[[16.47 16.9 ]\n [13.17 16.39]\n [32.82 32.78]\n [41.32 46.23]\n [16.69 19.76]]"
+        "text": "5/5 ━━━━━━━━━━━━━━━━━━━━ 0s 15ms/step\n[[16.990456  18.679298 ]\n [14.0693655 16.29604  ]\n [29.435326  30.311253 ]\n [36.950077  38.5808   ]\n [15.444393  17.219746 ]]\n[[16.47 16.9 ]\n [13.17 16.39]\n [32.82 32.78]\n [41.32 46.23]\n [16.69 19.76]]"
       }
     ]
   },
   {
-    "title": "Evaluate the model",
-    "subtitle": "Calculate the R² score for heating load and cooling load.",
-    "code": "from sklearn import metrics\nimport numpy as np\n\ny_baseline = y_test.values\nfor i in range(2): # r2 for each output parameter - heating & cooling\n  r2 = metrics.r2_score(y_baseline[:, i], prediction[:, i])\n\n  print('r2 error: ' + str(r2))",
+    "title": "Evaluation",
+    "subtitle": "The model output is evaluated using `sklearn` and `numpy`. R2, Mean Average Error, Root Mean Squared Error, model accuracy and the percentage of predictions that were within 10% of the real values were all observed. These evaluations were conducted separately for each of the output dimensions - heating and cooling.",
+    "code": "from sklearn import metrics\nimport numpy as np\n\ny_baseline = y_test.values\naccuracies = []\noutput_names = ['heating', 'cooling']\n\nfor i in range(2): # metrics for each output parameter - heating & cooling\n  r2 = metrics.r2_score(y_baseline[:, i], prediction[:, i])\n  mae = metrics.mean_absolute_error(y_baseline[:, i], prediction[:, i])\n  rmse = np.sqrt(metrics.mean_squared_error(y_baseline[:, i], prediction[:, i]))\n  pct_error = np.abs(y_baseline[:, i] - prediction[:, i]) / np.abs(y_baseline[:, i])\n  accuracy = 100 - np.mean(pct_error) * 100\n  within_10 = np.mean(pct_error <= 0.10) * 100\n  accuracies.append(accuracy)\n\n  print(output_names[i])\n  print('r2: ' + str(r2))\n  print('mae (kWh/m2): ' + str(mae))\n  print('rmse (kWh/m2): ' + str(rmse))\n  print('accuracy (100% - MAPE): ' + str(accuracy))\n  print('within +/-10%: ' + str(within_10))\n  print()\n\nprint('meets 85% success target: ' + str(all(a >= 85 for a in accuracies)))",
     "outputs": [
       {
         "type": "text",
-        "text": "r2 error: 0.8837766723777402\nr2 error: 0.8981754893433493"
+        "text": "heating\nr2: 0.8924092310613106\nmae (kWh/m2): 2.4666181665891176\nrmse (kWh/m2): 3.348783747251974\naccuracy (100% - MAPE): 87.64552489254052\nwithin +/-10%: 56.493506493506494\n\ncooling\nr2: 0.890882757329257\nmae (kWh/m2): 2.426939001702643\nrmse (kWh/m2): 3.1797015896657594\naccuracy (100% - MAPE): 90.63237046565706\nwithin +/-10%: 58.44155844155844\n\nmeets 85% success target: True"
+      }
+    ]
+  },
+  {
+    "title": "Cross-validation",
+    "subtitle": "Cross-validation was performed to determine if the model's results were replicable. The dataset was split into `n_split` (5) segments, and 5 consecutive training runs were performed where 4 segments were used for training, and 1 was withheld. This isolates bias from segments from within the dataset and confirms if the initial training process was conducted with uniformly correlated data.",
+    "code": "from sklearn.model_selection import KFold\n\nX_cv = np.asarray(X_train)\ny_cv = np.asarray(y_train)\ncv_scores = []\n\nfor train_idx, val_idx in KFold(n_splits=5, shuffle=True, random_state=42).split(X_cv):\n  cv_model = Sequential()\n  cv_model.add(Input(shape=(input_dim,)))\n  cv_model.add(Dense(n_neurons_1, activation='relu'))\n  cv_model.add(Dense(n_neurons_2, activation='relu'))\n  cv_model.add(Dense(n_neurons_3, activation='relu'))\n  cv_model.add(Dense(output_dim))\n  cv_model.compile(loss='mean_squared_error', optimizer='adam')\n\n  cv_model.fit(X_cv[train_idx], y_cv[train_idx], epochs=epochNo, batch_size=batchSize, verbose=0)\n  cv_pred = cv_model.predict(X_cv[val_idx], verbose=0)\n  cv_scores.append(metrics.r2_score(y_cv[val_idx], cv_pred))\n\nprint('cross-validation r2: ' + str(np.mean(cv_scores)))",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "cross-validation r2: 0.881189268965457"
       }
     ]
   }

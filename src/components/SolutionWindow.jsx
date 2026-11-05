@@ -1,7 +1,9 @@
 import { useState } from "react";
 import a from "../solutions/a/a.json";
+import b from "../solutions/b/b.json";
+import c from "../solutions/c/c.json";
 
-const solutions = { a };
+const solutions = { a, b, c };
 const images = import.meta.glob("../solutions/*/images/*", { eager: true, query: "?url", import: "default" });
 
 function SolutionWindow({solution}){
@@ -18,7 +20,7 @@ function SolutionWindow({solution}){
                 <div className="min-w-0">
                     <div>
                         <h3 className="m-0">{step.title}</h3>
-                        <p className="m-0 mt-3">{step.subtitle}</p>
+                        <p className="m-0 mt-3 whitespace-pre-line">{step.subtitle}</p>
                     </div>
                 </div>
                 <div className="min-w-0 border border-solid border-1px border-white rounded rounded-[12px] pt-3">

@@ -1,0 +1,188 @@
+[
+  {
+    "title": "Load the dataset",
+    "subtitle": "Reads the CSV (it has no header row), names the columns, and splits them into inputs `X` (x1–x8) and targets `y` (heating and cooling load). The dataset has no missing values, so no cleaning is needed.",
+    "code": "import pandas as pd\n\ndf = pd.read_csv('/content/drive/MyDrive/Assignment/Energy_Efficiency_Dataset.csv', names = ['x1','x2','x3','x4','x5','x6','x7','x8','y1', 'y2'] )\n\nX = df.iloc[:, :8] # building parameters\ny = df.iloc[:, 8:] # target parameters - heating and cooling load",
+    "outputs": []
+  },
+  {
+    "title": "Train/test split",
+    "subtitle": "The same seed (42) ensures that each model is evaluated on the same structures. Feature scaling is unnecessary, as a tree evaluates one feature against a threshold sequentially.",
+    "code": "from sklearn.model_selection import train_test_split\n\nX_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)",
+    "outputs": []
+  },
+  {
+    "title": "Set a baseline",
+    "subtitle": "The training average is consistently predicted by a `DummyRegressor`. It serves as a benchmark for the R² and error values that will be determined at a later time, as any useful model must undoubtedly surpass it.",
+    "code": "from sklearn.dummy import DummyRegressor\nfrom sklearn import metrics\n\nbaseline = DummyRegressor(strategy='mean').fit(X_train, y_train)\nbaseline_prediction = baseline.predict(X_test)\nprint('baseline r2 (heating, cooling): ' + str(metrics.r2_score(y_test, baseline_prediction, multioutput='raw_values').round(4)))\nprint('baseline MAE (heating, cooling): ' + str(metrics.mean_absolute_error(y_test, baseline_prediction, multioutput='raw_values').round(4)))",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "baseline r2 (heating, cooling): [-0.0055 -0.0084]\nbaseline MAE (heating, cooling): [9.2721 8.7419]"
+      }
+    ]
+  },
+  {
+    "title": "Set the model parameters",
+    "subtitle": "`max_depth` limits how many splits the tree can make from top to bottom. `min_samples_leaf` indicates the minimum quantity of structures permitted within a leaf. Both mitigate overfitting. The term `squared_error` signifies that each division is selected to minimise the mean squared error to the greatest extent.",
+    "code": "from sklearn.tree import DecisionTreeRegressor\n\nmaxDepth = 8\nminSamplesLeaf = 2\ncriterion = 'squared_error'\nrandomState = 42",
+    "outputs": []
+  },
+  {
+    "title": "Create the Decision Tree",
+    "subtitle": "It learns if/else rules (for instance, \"is x5 ≤ 5.25?\"), and each terminal node forecasts the mean heating and cooling demand of the training structures that arrive at it. A single tree forecasts both results simultaneously.",
+    "code": "model = DecisionTreeRegressor(max_depth=maxDepth, min_samples_leaf=minSamplesLeaf,\n                              criterion=criterion, random_state=randomState)",
+    "outputs": []
+  },
+  {
+    "title": "Train the model",
+    "subtitle": "Fit the tree to the training data and note its depth, number of leaves and training duration .",
+    "code": "import time\n\nstart = time.time()\nmodel.fit(X_train, y_train)\ntrain_time = time.time() - start\n\nprint('tree depth: ' + str(model.get_depth()))\nprint('number of leaves: ' + str(model.get_n_leaves()))\nprint('training time (s): ' + str(round(train_time, 4)))\n\nfrom sklearn import metrics\ninitial_r2 = metrics.r2_score(y_test, model.predict(X_test), multioutput='raw_values')\nprint('initial tree test r2 (heating, cooling): ' + str(initial_r2.round(4)))",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "tree depth: 8\nnumber of leaves: 166\ntraining time (s): 0.0063\ninitial tree test r2 (heating, cooling): [0.9975 0.9517]"
+      }
+    ]
+  },
+  {
+    "title": "Training curve",
+    "subtitle": "A tree has no epochs, hence this instead graphs training and validation error (5-fold cross-validation) vs. tree depth. If the validation error stops going down, but the training error continues to go down, then the tree is beginning to overfit.",
+    "code": "import numpy as np\nimport matplotlib.pyplot as plt\nfrom sklearn.model_selection import validation_curve, KFold\n\ncv = KFold(n_splits=5, shuffle=True, random_state=42)\ndepths = range(1, 16)\ntrain_scores, val_scores = validation_curve(\n    DecisionTreeRegressor(min_samples_leaf=minSamplesLeaf, random_state=randomState), X_train, y_train,\n    param_name='max_depth', param_range=depths, cv=cv, scoring='neg_mean_squared_error')\n\nplt.plot(depths, -train_scores.mean(axis=1), label='training loss')\nplt.plot(depths, -val_scores.mean(axis=1), label='validation loss')\nplt.xlabel('Tree depth')\nplt.ylabel('M2 error')\nplt.yscale('log')\nplt.title('Training curve')\nplt.legend()\nplt.show()",
+    "outputs": [
+      {
+        "type": "image",
+        "src": "images/step-7.png",
+        "alt": "Training and validation loss against tree depth on a log scale"
+      }
+    ]
+  },
+  {
+    "title": "Tune the parameters",
+    "subtitle": "Using 5-fold cross-validation on the training set, try every combination of max_depth and min_samples_leaf and keep the best as the final model.",
+    "code": "from sklearn.model_selection import GridSearchCV\n\nparam_grid = {'max_depth': [4, 6, 8, 10, 12, None],\n              'min_samples_leaf': [1, 2, 4, 8]}\ngrid = GridSearchCV(DecisionTreeRegressor(criterion=criterion, random_state=randomState),\n                    param_grid, cv=cv, scoring='r2')\ngrid.fit(X_train, y_train)\n\nstart = time.time()\nmodel = DecisionTreeRegressor(criterion=criterion, random_state=randomState, **grid.best_params_).fit(X_train, y_train)\ntrain_time = time.time() - start\nprint('final tree depth: ' + str(model.get_depth()) + ', leaves: ' + str(model.get_n_leaves()))\nprint('final training time (s): ' + str(round(train_time, 4)))",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "final tree depth: 6, leaves: 55\nfinal training time (s): 0.0038"
+      }
+    ]
+  },
+  {
+    "title": "Predict the test set",
+    "subtitle": "Predicts both loads for the test buildings and displays the first five forecasts alongside the actual values (left: heating, right: cooling).",
+    "code": "start = time.time()\nprediction = model.predict(X_test)\npredict_time = time.time() - start\n\nprint(prediction[:5])\nprint(y_test[:5].values)",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "[[16.64555556 16.62333333]\n [12.99428571 15.85142857]\n [32.286875   33.468125  ]\n [42.10076923 41.52923077]\n [16.779      20.115     ]]\n[[16.47 16.9 ]\n [13.17 16.39]\n [32.82 32.78]\n [41.32 46.23]\n [16.69 19.76]]"
+      }
+    ]
+  },
+  {
+    "title": "R² score",
+    "subtitle": "R² is the percentage of variation explained by the model for each load (1 = perfect, 0 = no better than guessing the average).",
+    "code": "from sklearn import metrics\n\ny_baseline = y_test.values\nfor i in range(2): # r2 for each output parameter - heating & cooling\n  r2 = metrics.r2_score(y_baseline[:, i], prediction[:, i])\n\n  print('r2 error: ' + str(r2))",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "r2 error: 0.9959392832734746\nr2 error: 0.9556127895455722"
+      }
+    ]
+  },
+  {
+    "title": "Evaluation metrics",
+    "subtitle": "MAE and RMSE provide the average error in kWh/m² (RMSE penalises large errors more). For the 85% target, accuracy is calculated as 100% − MAPE. The training R² is used to detect overfitting.",
+    "code": "train_prediction = model.predict(X_train)\nrows = {}\nfor i, name in enumerate(['heating (y1)', 'cooling (y2)']):\n  true, pred = y_baseline[:, i], prediction[:, i]\n  mape = metrics.mean_absolute_percentage_error(true, pred)\n  rows[name] = {'R2 (test)': metrics.r2_score(true, pred),\n                'R2 (train)': metrics.r2_score(y_train.values[:, i], train_prediction[:, i]),\n                'MAE': metrics.mean_absolute_error(true, pred),\n                'RMSE': np.sqrt(metrics.mean_squared_error(true, pred)),\n                'MAPE (%)': mape * 100,\n                'Accuracy (100% - MAPE)': (1 - mape) * 100,\n                'Within ±10% (%)': np.mean(np.abs(pred - true) / true <= 0.10) * 100}\nresults = pd.DataFrame(rows).round(4)\nresults",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "                        heating (y1)  cooling (y2)\nR2 (test)                     0.9959        0.9556\nR2 (train)                    0.9962        0.9717\nMAE                           0.4702        1.3328\nRMSE                          0.6506        2.0280\nMAPE (%)                      2.1522        4.4454\nAccuracy (100% - MAPE)       97.8478       95.5546\nWithin ±10% (%)              98.0519       87.0130"
+      }
+    ]
+  },
+  {
+    "title": "Predicted vs actual plot",
+    "subtitle": "Each point represents one test building. Points on the dashed line are perfect predictions, whereas points away from it indicate substantial errors.",
+    "code": "fig, axes = plt.subplots(1, 2, figsize=(10, 4))\nfor i, name in enumerate(['Heating load', 'Cooling load']):\n  axes[i].scatter(y_baseline[:, i], prediction[:, i], alpha=0.6)\n  lims = [y_baseline[:, i].min() - 2, y_baseline[:, i].max() + 2]\n  axes[i].plot(lims, lims, 'k--')\n  axes[i].set_xlabel('Actual (kWh/m²)')\n  axes[i].set_ylabel('Predicted (kWh/m²)')\n  axes[i].set_title(name)\nplt.tight_layout()\nplt.show()",
+    "outputs": [
+      {
+        "type": "image",
+        "src": "images/step-12.png",
+        "alt": "Scatter plots of predicted against actual heating and cooling loads with a perfect-prediction line"
+      }
+    ]
+  },
+  {
+    "title": "Cross-validation",
+    "subtitle": "Repeats training and testing on five different splits of the training data. A lower standard deviation indicates that the results are stable.",
+    "code": "from sklearn.model_selection import cross_val_score\n\ncv_r2 = cross_val_score(model, X_train, y_train, cv=cv, scoring='r2')\nprint('cross-validation r2 per fold: ' + str(np.round(cv_r2, 4)))\nprint('mean: ' + str(round(cv_r2.mean(), 4)) + '  std: ' + str(round(cv_r2.std(), 4)))",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "cross-validation r2 per fold: [0.9787 0.9785 0.976  0.9782 0.974 ]\nmean: 0.9771  std: 0.0018"
+      }
+    ]
+  },
+  {
+    "title": "Inspect errors",
+    "subtitle": "Displays the 5 biggest test errors for each load to illustrate where the tree has trouble. Then test the tree on building shapes that it has never seen at training. The training designs are organised by the five geometry features (x1-x5) so each of the 12 shapes stays inside one fold. This uses simply the training set and is the same check as the group's SVR notebook.",
+    "code": "from sklearn.model_selection import GroupKFold, cross_val_predict\n\nfor i, name in enumerate(['heating', 'cooling']):\n    errors = pd.DataFrame({'actual': y_baseline[:, i], 'predicted': prediction[:, i]})\n    errors['abs_error'] = (errors['predicted'] - errors['actual']).abs()\n    print(name + ': five largest errors (kWh/m²)')\n    print(errors.nlargest(5, 'abs_error').round(2))\n    print()\n\ngroups = pd.factorize(pd.MultiIndex.from_frame(X_train.iloc[:, :5]))[0]\nshape_prediction = cross_val_predict(DecisionTreeRegressor(random_state=randomState, **grid.best_params_),\n                                     X_train, y_train, groups=groups, cv=GroupKFold(n_splits=5))\nprint('unseen-shape r2 (heating, cooling): ' + str(metrics.r2_score(y_train, shape_prediction, multioutput='raw_values').round(4)))",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "heating: five largest errors (kWh/m²)\n     actual  predicted  abs_error\n122   23.93      27.18       3.25\n130   15.55      18.60       3.05\n137   42.96      41.61       1.35\n85    12.43      13.76       1.33\n66    35.45      36.61       1.16\n\ncooling: five largest errors (kWh/m²)\n     actual  predicted  abs_error\n81    36.26      42.58       6.32\n23    34.25      40.22       5.97\n34    43.33      37.41       5.92\n25    43.30      37.41       5.89\n149   45.97      40.61       5.36\n\nunseen-shape r2 (heating, cooling): [-0.0795 -0.0842]"
+      }
+    ]
+  },
+  {
+    "title": "Tree diagram",
+    "subtitle": "Draws the top three levels of the tree, with each box displaying the split question, error, number of buildings, and estimated [heating, cooling] load.",
+    "code": "from sklearn.tree import plot_tree\n\nplt.figure(figsize=(20, 8))\nplot_tree(model, feature_names=list(X.columns), filled=True, rounded=True, fontsize=9, max_depth=3)\nplt.title('Decision Tree (top 3 levels)')\nplt.show()",
+    "outputs": [
+      {
+        "type": "image",
+        "src": "images/step-15.png",
+        "alt": "Diagram of the top three levels of the decision tree"
+      }
+    ]
+  },
+  {
+    "title": "Feature importance",
+    "subtitle": "Shows how much each building parameter lowered the error across all splits, allowing you to determine which design decisions are most important for energy efficiency.",
+    "code": "importance = pd.Series(model.feature_importances_, index=X.columns).sort_values()\nimportance.plot.barh()\nplt.xlabel('Importance')\nplt.title('Feature importance')\nplt.show()\nprint(importance.sort_values(ascending=False).round(4))",
+    "outputs": [
+      {
+        "type": "image",
+        "src": "images/step-16.png",
+        "alt": "Horizontal bar chart of feature importance for x1 to x8"
+      },
+      {
+        "type": "text",
+        "text": "x1    0.8909\nx7    0.0601\nx2    0.0225\nx3    0.0132\nx8    0.0126\nx6    0.0007\nx4    0.0000\nx5    0.0000\ndtype: float64"
+      }
+    ]
+  },
+  {
+    "title": "Predict a new building",
+    "subtitle": "Gives the model one new building design (values x1-x8) and reports the projected loads. The final user interface functions in the same way.",
+    "code": "new_building = pd.DataFrame([[0.98, 514.5, 294.0, 110.25, 7.0, 2, 0.0, 0]], columns=X.columns)\nnew_prediction = model.predict(new_building)[0]\nprint('predicted heating load: ' + str(round(new_prediction[0], 2)) + ' kWh/m²')\nprint('predicted cooling load: ' + str(round(new_prediction[1], 2)) + ' kWh/m²')",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "predicted heating load: 18.6 kWh/m²\npredicted cooling load: 24.44 kWh/m²"
+      }
+    ]
+  },
+  {
+    "title": "Summary for group comparison",
+    "subtitle": "Collects the main findings in a single table for group comparison.",
+    "code": "summary = pd.Series({\n  'R2 heating': results.loc['R2 (test)', 'heating (y1)'],\n  'R2 cooling': results.loc['R2 (test)', 'cooling (y2)'],\n  'MAE heating': results.loc['MAE', 'heating (y1)'],\n  'MAE cooling': results.loc['MAE', 'cooling (y2)'],\n  'Accuracy heating (%)': results.loc['Accuracy (100% - MAPE)', 'heating (y1)'],\n  'Accuracy cooling (%)': results.loc['Accuracy (100% - MAPE)', 'cooling (y2)'],\n  'CV r2 (mean)': round(cv_r2.mean(), 4),\n  'Training time (s)': round(train_time, 4),\n  'Prediction time (s)': round(predict_time, 4),\n}, name='Decision Tree')\nsummary",
+    "outputs": [
+      {
+        "type": "text",
+        "text": "R2 heating               0.9959\nR2 cooling               0.9556\nMAE heating              0.4702\nMAE cooling              1.3328\nAccuracy heating (%)    97.8478\nAccuracy cooling (%)    95.5546\nCV r2 (mean)             0.9771\nTraining time (s)        0.0038\nPrediction time (s)      0.0019\nName: Decision Tree, dtype: float64"
+      }
+    ]
+  }
+]
