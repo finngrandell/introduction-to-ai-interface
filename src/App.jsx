@@ -7,16 +7,16 @@ export default function App() {
   const [solutionSelected, setSolutionSelected] = useState('a');
 
   return (
-    <div className="w-full h-full">
+    <div className="relative w-full min-h-screen flex flex-col">
 
-      <div className="absolute top-0 w-full"> {/* Header */}
+      <div className="sticky top-0 z-10 w-full bg-ink"> {/* Header */}
          <div className="px-20">
           <h2 className="text-white">Introduction to AI - Heating & Cooling Predictions</h2>
         </div>
         <div className="h-1px bg-white w-full"></div>
       </div>
      
-      <div className="px-20 my-25 text-white"> {/* Body */}
+      <div className="px-20 my-10 text-white"> {/* Body */}
         <div>
           <h1>Predicting the heating and cooling loads of buildings</h1>
           <p>Brief explanation here...</p>
@@ -55,7 +55,7 @@ export default function App() {
 
       </div>
 
-      <div className="absolute bottom-0 w-full"> {/* Footer */}
+      <div className="sticky bottom-0 z-10 mt-auto w-full bg-ink"> {/* Footer */}
         <div className="h-1px bg-white w-full"></div>
         <div className="px-20"> 
           <h2 className="text-white">Finn Randell | Yash Patil | Aaryan Dixit</h2>
