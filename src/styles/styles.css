@@ -6,3 +6,8 @@ Teal - #2BC7A4
 Deep Teal - #16524A
 Ink - #111816
 */
+
+/* Form controls don't inherit the page font by default */
+button, input, select, textarea {
+  font: inherit;
+}

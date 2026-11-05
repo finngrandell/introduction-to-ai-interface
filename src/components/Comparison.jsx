@@ -1,104 +1,190 @@
-const techniques = ["Neural Network (MLP)", "Decision Tree", "SVR"];
+import { useState } from "react";
 
-const resultsTable = {
-    header: "Measure",
-    caption: "Table 1: Test-set results of the techniques",
-    rows: [
-        ["R² - Heating", "0.8924", "0.9959", "0.9980"],
-        ["R² -  Cooling", "0.8908", "0.9556", "0.9768"],
-        ["MAE - heating (kWh/m²)", "2.4666", "0.4702", "0.3451"],
-        ["MAE - cooling (kWh/m²)", "2.4269", "1.3328", "0.8542"],
-        ["RMSE - heating (kWh/m²)", "3.3487", "0.6506", "0.4578"],
-        ["RMSE - cooling (kWh/m²)", "3.1797", "2.0280", "1.4665"],
-        ["Accuracy (100% - MAPE) - heating", "87.65%", "97.85%", "98.24%"],
-        ["Accuracy (100% - MAPE) - cooling", "90.63%", "95.55%", "96.85%"],
-        ["Within ±10% - heating", "56.49%", "98.05%", "99.35%"],
-        ["Within ±10% - cooling", "58.44%", "87.01%", "95.45%"],
-        ["Cross-validation R²", "0.8812 ±", "0.9771 ±", "0.9845 ±"],
-        ["Meets 85% success target", "YES", "YES", "YES"],
-    ],
-};
-
-const prosConsTable = {
-    header: "Criteria",
-    caption: "Table 2: Summary of pros and cons of the techniques",
-    rows: [
-        ["Prediction Quality (R²)", "Lowest (0.88 - 0.90)", "High (0.96 - 1.00)", "Highest (0.98 - 1.00)"],
-        ["Typical Error (MAE)", "", "Low", "Lowest"],
-        ["Training and tuning time", "Slow (200 epochs)", "Fastest", "Slowest"],
-        ["Needs feature scaling", "Yes (Not Applied)", "No", "Yes (Applied)"],
-        ["Interpretability", "Low", "High", "Low"],
-        ["Stability between runs", "No seed set so it varies", "Same result with a fixed seed", "Same result with a fixed seed"],
-    ],
-};
-
-const intro = "Three strategies were considered: a feedforward neural network (MLP), a decision tree regressor, and support vector regression (SVR). To provide a fair comparison, all three used the same dataset, eight input parameters, and an 80/20 train/test split (random_state = 42), so each model was tested on the same 154 unseen buildings. The main quality metric was R², which represents the load fluctuation described by the model. MAE and RMSE measured the magnitude of errors in kWh/m².  RMSE penalises larger errors more severely. We evaluated accuracy (100% − MAPE), prediction precision (±10% of genuine load), cross-validation stability, speed, and interpretability.";
-
-const overview = "All three solutions met the project quality target of 85%, and each was more accurate in projecting heating demand than cooling load. These findings indicate that cooling demand is more difficult to forecast using these eight parameters. SVR has the best performance across all measures, followed by decision trees. The neural network explained just 88-90% of the variation, but the other two strategies explained more than 95%.";
-
-const techniqueNotes = [
+const models = [
     {
-        lead: "Neural networks.",
-        text: "The MLP contained three hidden layers (64, 32, and 16 neurones) and was trained over 200 epochs. Its strength is its ability to model smooth, non-linear interactions and estimate both loads simultaneously, and its loss curves show how it learned. However, it had the lowest R2 values (0.88 for heating, 0.90 for cooling). Its inputs were probably not scaled. The features range from less than 1 to more than 800, and neural networks are sensitive to such differences. It is also difficult to interpret. Has the most parameters to change. The results vary from run to run because no random seed was used.",
+        id: "nn",
+        name: "Neural Network",
+        short: "MLP",
+        tagline: "Three hidden layers (64, 32, 16), trained over 200 epochs",
+        strengths: ["Models smooth, non-linear interactions", "Estimates both loads simultaneously"],
+        weaknesses: ["Inputs not scaled", "Difficult to interpret", "No seed set, so results vary between runs"],
     },
     {
-        lead: "Decision tree.",
-        text: "The amended tree had a R² of 0.9959 for heating and 0.9556 for cooling at a maximum depth of 6. Its key feature is interpretability: its principles indicate that relative compactness accounts for approximately 89% of the predictive importance, followed by glazing area. It did not require feature scaling. It was the quickest approach for tuning and training. It displayed little overfitting, with nearly identical R² values for training and testing. The problem is that its forecasts are step-shaped, meaning that all buildings in the same leaf receive the same value. Only 87% of cooling predictions were within ±10%, compared to SVR's 95% accuracy.",
+        id: "dt",
+        name: "Decision Tree",
+        short: "Tree",
+        tagline: "Tuned to a maximum depth of 6",
+        strengths: ["Highly interpretable", "Quickest to tune and train", "Little overfitting"],
+        weaknesses: ["Step-shaped forecasts", "Only 87% of cooling predictions within ±10%"],
     },
     {
-        lead: "SVR.",
-        text: "SVR was developed with an RBF kernel, scaled inputs, and parameters chosen from 36 combinations using five-fold cross-validation. It achieved the best results, with the greatest R² values of 0.9980 for heating and 0.9768 for cooling, and the lowest MAE and RMSE for both loads. Because the forecasts are smooth, slight design changes result in minor variations in the projected load. Its downsides include challenging interpretation, reliance on feature scaling, and the longest tuning time at 144 seconds, as opposed to a few seconds for the decision tree.",
+        id: "svr",
+        name: "Support Vector Regression",
+        short: "SVR",
+        tagline: "RBF kernel, scaled inputs, 36 parameter combinations tested",
+        strengths: ["Best results on every measure", "Smooth forecasts"],
+        weaknesses: ["Challenging to interpret", "Relies on feature scaling", "Longest tuning time (144 s)"],
+        chosen: true,
     },
 ];
 
-const weakness = "All three models have one significant weakness in common. Excluding each building shape from training and testing resulted in significantly lower performance, with SVR's R² going below zero and the decision tree's R² decreasing to approximately 0.35. Thus, the models are appropriate for evaluating orientation and glazing options for the 12 existing shapes, but not for forecasting wholly new building shapes.";
+const metrics = [
+    { id: "r2", label: "R²", higherIsBetter: true, min: 0.85, max: 1,
+      values: { nn: [0.8924, 0.8908], dt: [0.9959, 0.9556], svr: [0.998, 0.9768] }, format: (v) => v.toFixed(4) },
+    { id: "mae", label: "MAE", higherIsBetter: false, max: 2.5,
+      values: { nn: [2.4666, 2.4269], dt: [0.4702, 1.3328], svr: [0.3451, 0.8542] }, format: (v) => v.toFixed(2) },
+    { id: "rmse", label: "RMSE", higherIsBetter: false, max: 3.5,
+      values: { nn: [3.3487, 3.1797], dt: [0.6506, 2.028], svr: [0.4578, 1.4665] }, format: (v) => v.toFixed(2) },
+    { id: "within", label: "Within ±10%", higherIsBetter: true, max: 100,
+      values: { nn: [56.49, 58.44], dt: [98.05, 87.01], svr: [99.35, 95.45] }, format: (v) => `${v.toFixed(1)}%` },
+    { id: "acc", label: "Accuracy", higherIsBetter: true, max: 100,
+      values: { nn: [87.65, 90.63], dt: [97.85, 95.55], svr: [98.24, 96.85] }, format: (v) => `${v.toFixed(1)}%` },
+];
 
-const finalChoice = "The final solution was chosen as SVR because it had the highest accuracy and the fewest errors for heating and cooling loads. It takes longer to tune, but just once, and forecasts take a fraction of a second. If a small increase in accuracy is less critical than communicating a prognosis to a designer, the decision tree remains a viable option.";
+const glance = [
+    { label: "Prediction quality", values: ["Lowest", "High", "Highest"] },
+    { label: "Training & tuning", values: ["Slow", "Fastest", "Slowest"] },
+    { label: "Needs scaling", values: ["Yes (not applied)", "No", "Yes (applied)"] },
+    { label: "Interpretability", values: ["Low", "High", "Low"] },
+    { label: "Stable between runs", values: ["No", "Yes", "Yes"] },
+];
 
-function Table({ header, caption, rows }) {
+function Bar({ value, min = 0, max, highlight, format }) {
     return (
-        <figure className="m-0 my-6">
-            <div className="overflow-x-auto border border-solid border-white rounded-[12px]">
-                <table className="w-full border-collapse text-left">
+        <div className="flex items-center gap-3">
+            <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden">
+                <div
+                    className={`h-full rounded-full ${highlight ? "bg-teal" : "bg-gray"}`}
+                    style={{ width: `${Math.min(Math.max((value - min) / (max - min), 0), 1) * 100}%` }}
+                />
+            </div>
+            <span className="w-16 text-right tabular-nums text-sm">{format(value)}</span>
+        </div>
+    );
+}
+
+function MetricExplorer() {
+    const [metricId, setMetricId] = useState("r2");
+    const metric = metrics.find((m) => m.id === metricId);
+
+    const best = [0, 1].map((i) => {
+        const vals = models.map((m) => metric.values[m.id][i]);
+        return metric.higherIsBetter ? Math.max(...vals) : Math.min(...vals);
+    });
+
+    return (
+        <div className="border border-solid border-white rounded-[12px] p-5">
+            <div className="flex flex-wrap gap-2">
+                {metrics.map((m) => (
+                    <button
+                        key={m.id}
+                        onClick={() => setMetricId(m.id)}
+                        className={`px-3 py-1 rounded-full border border-solid text-sm cursor-pointer ${m.id === metricId ? "bg-teal text-ink border-teal" : "bg-ink text-white border-white/40"}`}
+                    >
+                        {m.label}
+                    </button>
+                ))}
+            </div>
+
+            <div className="grid gap-5 mt-5">
+                {models.map((m) => (
+                    <div key={m.id} className="grid grid-cols-[minmax(0,140px)_1fr] gap-x-4 gap-y-2 items-center max-sm:grid-cols-1">
+                        <div className={`font-semibold ${m.chosen ? "text-teal" : ""}`}>{m.name}</div>
+                        <div className="grid gap-2">
+                            {["Heating", "Cooling"].map((target, i) => (
+                                <div key={target} className="grid grid-cols-[64px_1fr] items-center gap-2">
+                                    <span className="text-gray text-sm">{target}</span>
+                                    <Bar value={metric.values[m.id][i]} min={metric.min} max={metric.max}
+                                         highlight={metric.values[m.id][i] === best[i]} format={metric.format} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function ModelCard({ model }) {
+    return (
+        <div className={`relative flex flex-col rounded-[12px] p-5 border border-solid ${model.chosen ? "border-white bg-deep-teal/40" : "border-white/40"}`}>
+            <h3 className="m-0">{model.name}</h3>
+            <p className="m-0 mt-2 text-sm text-gray">{model.tagline}</p>
+
+            <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                    <p className="m-0 text-sm font-semibold">Strengths</p>
+                    <ul className="m-0 mt-1 pl-5 text-sm leading-6">
+                        {model.strengths.map((s) => <li key={s}>{s}</li>)}
+                    </ul>
+                </div>
+                <div>
+                    <p className="m-0 text-sm font-semibold">Weaknesses</p>
+                    <ul className="m-0 mt-1 pl-5 text-sm leading-6">
+                        {model.weaknesses.map((w) => <li key={w}>{w}</li>)}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function Comparison() {
+    return (
+        <section className="mt-12">
+            <h2 className="mb-2">Comparison</h2>
+
+            <h3 className="mb-3">Explore the results</h3>
+            <MetricExplorer />
+            <p className="max-w-3xl w-full">
+                Each model was more accurate in projecting heating demand than cooling load, indicating that cooling demand is more difficult to forecast using these eight parameters.
+            </p>
+
+            <h3 className="mt-10 mb-5">The three techniques</h3>
+            <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-1">
+                {models.map((m) => <ModelCard key={m.id} model={m} />)}
+            </div>
+
+            <h3 className="mt-10 mb-3">At a glance</h3>
+            <div className="overflow-x-auto border border-solid border-white/40 rounded-[12px]">
+                <table className="w-full border-collapse text-left text-sm">
                     <thead>
-                        <tr className="bg-deep-teal">
-                            <th className="p-3 font-semibold">{header}</th>
-                            {techniques.map((t) => (
-                                <th key={t} className="p-3 font-semibold">{t}</th>
+                        <tr>
+                            <th className="p-3"></th>
+                            {models.map((m) => (
+                                <th key={m.id} className={`p-3 font-semibold ${m.chosen ? "text-teal" : ""}`}>{m.short}</th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
-                        {rows.map(([label, ...values]) => (
-                            <tr key={label} className="border-0 border-t border-solid border-white/20">
-                                <th className="p-3 font-normal text-gray">{label}</th>
-                                {values.map((v, i) => (
-                                    <td key={i} className="p-3 tabular-nums">{v}</td>
+                        {glance.map((row) => (
+                            <tr key={row.label} className="border-0 border-t border-solid border-white/20">
+                                <th className="p-3 font-normal text-gray">{row.label}</th>
+                                {row.values.map((v, i) => (
+                                    <td key={i} className={`p-3 ${models[i].chosen ? "bg-deep-teal/40" : ""}`}>{v}</td>
                                 ))}
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-            <figcaption className="mt-2 text-gray text-sm">{caption}</figcaption>
-        </figure>
-    );
-}
 
-function Comparison() {
-    return (
-        <div>
-            <h2>Comparison</h2>
-            <p>{intro}</p>
-            <Table {...resultsTable} />
-            <p>{overview}</p>
-            {techniqueNotes.map(({ lead, text }) => (
-                <p key={lead}><strong>{lead}</strong> {text}</p>
-            ))}
-            <Table {...prosConsTable} />
-            <p>{weakness}</p>
-            <p>{finalChoice}</p>
-        </div>
+            <div className="grid grid-cols-2 gap-4 mt-10 max-md:grid-cols-1">
+                <div className="rounded-[12px] border border-solid border-white/40 p-5">
+                    <p className="m-0 text-gray text-sm font-semibold uppercase tracking-wide">One shared weakness</p>
+                    <p className="m-0 mt-2">
+                        Holding out whole building shapes caused performance to drop sharply. The models are appropriate for evaluating orientation and glazing options for the 12 existing shapes, but not for forecasting wholly new building shapes.
+                    </p>
+                </div>
+                <div className="rounded-[12px] border border-solid border-teal bg-deep-teal/40 p-5">
+                    <p className="m-0 text-teal text-sm font-semibold uppercase tracking-wide">The verdict</p>
+                    <p className="m-0 mt-2">
+                        SVR was chosen because it had the highest accuracy and the fewest errors for heating and cooling loads. It takes longer to tune, but just once, and forecasts take a fraction of a second.
+                    </p>
+                </div>
+            </div>
+        </section>
     );
 }
 
