@@ -132,12 +132,12 @@ function ModelCard({ model }) {
 
 function Comparison() {
     return (
-        <section className="mt-12">
+        <section>
             <h2 className="mb-2">Comparison</h2>
 
             <h3 className="mb-3">Explore the results</h3>
             <MetricExplorer />
-            <p className="max-w-3xl w-full">
+            <p>
                 Each model was more accurate in projecting heating demand than cooling load, indicating that cooling demand is more difficult to forecast using these eight parameters.
             </p>
 
