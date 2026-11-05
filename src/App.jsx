@@ -1,5 +1,6 @@
 import SolutionSelector from "./components/SolutionSelector";
 import SolutionWindow from "./components/SolutionWindow";
+import Comparison from "./components/Comparison";
 import { useState } from "react";
 
 export default function App() {
@@ -45,9 +46,11 @@ export default function App() {
           </div>
         </div>
 
+        <Comparison />
+
         <div>
-          <h2>Comparison</h2>
-          <p>Comparison here...</p>
+          <h2>Chosen Solution</h2>
+          <p>Chosen solution here...</p>
         </div>
 
       </div>
